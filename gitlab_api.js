@@ -6,7 +6,7 @@ async function getGitlabPipelineStageStats(projectId, baseUrl, branchName, token
 
     // Function to fetch pipeline data
     async function fetchPipelines() {
-        const response = await fetch(`${baseUrl}/api/v4/projects/${projectId}/pipelines?ref=${branchName}`, {
+        const response = await fetch(`${baseUrl}/api/v4/projects/${projectId}/pipelines?ref=${branchName}&per_page=100`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -19,7 +19,7 @@ async function getGitlabPipelineStageStats(projectId, baseUrl, branchName, token
 
     // Function to fetch jobs for a pipeline
     async function fetchPipelineJobs(pipelineId) {
-        const response = await fetch(`${baseUrl}/api/v4/projects/${projectId}/pipelines/${pipelineId}/jobs?ref=${branchName}`, {
+        const response = await fetch(`${baseUrl}/api/v4/projects/${projectId}/pipelines/${pipelineId}/jobs?ref=${branchName}&per_page=100`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -39,7 +39,7 @@ async function getGitlabPipelineStageStats(projectId, baseUrl, branchName, token
             throw new Error('Pipelines response is not an array');
         }
         
-        const first30Pipelines = pipelines.slice(0, 30);
+        const first30Pipelines = pipelines.slice(0, 50);
 
         // Fetch jobs for all pipelines in parallel
         const allJobs = await Promise.all(
@@ -53,6 +53,8 @@ async function getGitlabPipelineStageStats(projectId, baseUrl, branchName, token
             if (!stageMap.has(job.stage)) {
                 stageMap.set(job.stage, {
                     stage: job.stage,
+                    status: job.status,
+                    started_at: job.started_at,
                     stage_jobs: []
                 });
             }
@@ -63,6 +65,7 @@ async function getGitlabPipelineStageStats(projectId, baseUrl, branchName, token
                 status: job.status,
                 web_url: job.web_url,
                 created_at: job.created_at,
+                pipeline_id: job.pipeline.id
             });
         });
 

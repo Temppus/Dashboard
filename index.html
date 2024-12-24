@@ -41,6 +41,7 @@
         padding: 15px;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        height: 300px;
       }
     </style>
   </head>
@@ -49,61 +50,18 @@
       <h1>Performance Metrics</h1>
       <div>Last Updated: <span id="lastUpdated"></span></div>
     </div>
-    <div class="grid">
-      <div class="chart-container">
-        <canvas id="chart1"></canvas>
-      </div>
-      <div class="chart-container">
-        <canvas id="chart2"></canvas>
-      </div>
-      <div class="chart-container">
-        <canvas id="chart3"></canvas>
-      </div>
+    <div id="chartsGrid" class="grid">
     </div>
 
     <script>
-      // Call the async function once the DOM is fully loaded
-      document.addEventListener("DOMContentLoaded", async () => {
-        try {
-          getGitlabPipelineStageStats(
-            GITLAB_PROJECT_ID,
-            GITLAB_BASE_URL,
-            GIT_BRANCH_NAME,
-            GITLAB_TOKEN
-          )
-            .then((stageStats) => {
-              console.log("Pipeline stage statistics:", stageStats);
-            })
-            .catch((error) => {
-              console.error("Error getting pipeline stats:", error);
-            });
-        } catch (error) {
-          console.error("Error fetching pipeline stats:", error);
-        }
-      });
-
-      // Generate fake time series data
-      function generateData(points, baseValue, volatility) {
-        const data = [];
-        let currentDate = luxon.DateTime.now();
-
-        for (let i = points; i > 0; i--) {
-          data.push({
-            x: currentDate.minus({ days: i }).toJSDate(),
-            y: baseValue + (Math.random() - 0.5) * volatility,
-          });
-        }
-        return data;
-      }
-
       // Configure and create charts
-      function createChart(ctx, label, data, color) {
+      function createChart(ctx, stage, data, color) {
         return new Chart(ctx, {
           type: "line",
           data: {
             datasets: [
               {
-                label: label,
+                label: stage,
                 data: data,
                 borderColor: color,
                 backgroundColor: color + "20",
@@ -114,14 +72,14 @@
           },
           options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: false,            
             plugins: {
               legend: {
                 position: "top",
               },
               title: {
                 display: true,
-                text: label,
+                text: stage,
               },
             },
             scales: {
@@ -141,10 +99,10 @@
                 },
               },
               y: {
-                beginAtZero: false,
+                beginAtZero: true,
                 title: {
                   display: true,
-                  text: "Value",
+                  text: "Duration (seconds)",
                 },
               },
             },
@@ -152,30 +110,74 @@
         });
       }
 
-      // Initialize dashboard
-      document.addEventListener("DOMContentLoaded", function () {
-        // Update last updated timestamp
-        document.getElementById("lastUpdated").textContent =
-          new Date().toLocaleString();
+      // Generate random color
+      function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+          color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+      }
 
-        // Create charts with different fake data
-        const ctx1 = document.getElementById("chart1").getContext("2d");
-        const ctx2 = document.getElementById("chart2").getContext("2d");
-        const ctx3 = document.getElementById("chart3").getContext("2d");
+      // Call the async function once the DOM is fully loaded
+      document.addEventListener("DOMContentLoaded", async () => {
+        try {
+          const stageStats = (await getGitlabPipelineStageStats(
+            GITLAB_PROJECT_ID,
+            GITLAB_BASE_URL,
+            GIT_BRANCH_NAME,
+            GITLAB_TOKEN
+          ))
+          .filter(stage => stage.stage_jobs.some(job => job.duration !== null) && stage.status === "success")
+          .sort((a, b) => new Date(a.started_at) - new Date(b.started_at));
 
-        createChart(ctx1, "CPU Usage", generateData(30, 70, 20), "#ff6384");
-        createChart(ctx2, "Memory Usage", generateData(30, 85, 10), "#36a2eb");
-        createChart(
-          ctx3,
-          "Response Time",
-          generateData(30, 150, 30),
-          "#4bc0c0"
-        );
+          console.log("Pipeline stage statistics:", stageStats);
+          
+          // Update last updated timestamp
+          document.getElementById("lastUpdated").textContent = new Date().toLocaleString();
+          
+          // Clear existing grid
+          const chartsGrid = document.getElementById("chartsGrid");
+          chartsGrid.innerHTML = '';
+          
+          // Create a chart for each stage
+          stageStats.forEach((stageData, index) => {
+            // Create container for new chart
+            const chartContainer = document.createElement("div");
+            chartContainer.className = "chart-container";
+            const canvas = document.createElement("canvas");
+            chartContainer.appendChild(canvas);
+            chartsGrid.appendChild(chartContainer);
 
-        // Set container height
-        document.querySelectorAll(".chart-container").forEach((container) => {
-          container.style.height = "300px";
-        });
+            // Process data for chart
+            const chartData = Object.values(
+              stageData.stage_jobs
+                .filter(job => job.duration !== null)
+                .reduce((acc, job) => {
+                  if (!acc[job.pipeline_id]) {
+                    acc[job.pipeline_id] = {
+                      x: new Date(job.created_at),
+                      y: 0
+                    };
+                  }
+                  // Update x to be earliest date
+                  if (new Date(job.created_at) < acc[job.pipeline_id].x) {
+                    acc[job.pipeline_id].x = new Date(job.created_at);
+                  }
+                  acc[job.pipeline_id].y += job.duration;
+                  return acc;
+                }, {})
+            );
+
+            // Create chart
+            const ctx = canvas.getContext("2d");
+            createChart(ctx, stageData.stage, chartData, getRandomColor());
+          });
+
+        } catch (error) {
+          console.error("Error fetching pipeline stats:", error);
+        }
       });
     </script>
   </body>
