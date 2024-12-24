@@ -3,10 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <title>Performance Metrics Dashboard</title>
-    
+    <script>
+        const GITLAB_PROJECT_ID = 1053;        
+        const GITLAB_BASE_URL = "https://gitlab.ba.innovatrics.net/";        
+        const GIT_BRANCH_NAME = "master";
+        const GITLAB_TOKEN = 'TODO';
+    </script>    
     <script src="https://cdn.jsdelivr.net/npm/chart.js@^3"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
+    <script src="gitlab_api.js" defer></script>
+    <script>
+        // Call the async function once the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', async () => {
+          try {
+            getGitlabPipelineStageStats(GITLAB_PROJECT_ID, GITLAB_BASE_URL, GIT_BRANCH_NAME, GITLAB_TOKEN)
+            .then(stageStats => {
+                console.log('Pipeline stage statistics:', stageStats);
+            })
+            .catch(error => {
+                console.error('Error getting pipeline stats:', error);
+            });
+          } catch (error) {
+            console.error('Error fetching pipeline stats:', error);
+          }
+        });
+      </script>
 
     <style>
         body {
@@ -53,8 +75,10 @@
             <canvas id="chart3"></canvas>
         </div>
     </div>
+    
 
     <script>
+
         // Generate fake time series data
         function generateData(points, baseValue, volatility) {
             const data = [];
