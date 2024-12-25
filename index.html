@@ -43,6 +43,30 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         height: 300px;
       }
+      .loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
   </head>
   <body>
@@ -51,6 +75,9 @@
       <div>Last Updated: <span id="lastUpdated"></span></div>
     </div>
     <div id="chartsGrid" class="grid">
+    </div>
+    <div id="loadingIndicator" class="loading">
+      <div class="loading-spinner"></div>
     </div>
 
     <script>
@@ -122,7 +149,9 @@
 
       // Call the async function once the DOM is fully loaded
       document.addEventListener("DOMContentLoaded", async () => {
+        const loadingIndicator = document.getElementById("loadingIndicator");
         try {
+          loadingIndicator.style.display = "flex";
           const stageStats = (await getGitlabPipelineStageStats(
             GITLAB_PROJECT_ID,
             GITLAB_BASE_URL,
@@ -295,6 +324,8 @@
 
         } catch (error) {
           console.error("Error fetching pipeline stats:", error);
+        } finally {
+          loadingIndicator.style.display = "none";
         }
       });
     </script>
