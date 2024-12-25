@@ -141,17 +141,17 @@
           const chartsGrid = document.getElementById("chartsGrid");
           chartsGrid.innerHTML = '';
           
-          // Create a chart for each stage
+          // Create charts for each stage
           stageStats.forEach((stageData, index) => {
-            // Create container for new chart
-            const chartContainer = document.createElement("div");
-            chartContainer.className = "chart-container";
-            const canvas = document.createElement("canvas");
-            chartContainer.appendChild(canvas);
-            chartsGrid.appendChild(chartContainer);
+            // Create container for line chart
+            const lineChartContainer = document.createElement("div");
+            lineChartContainer.className = "chart-container";
+            const lineCanvas = document.createElement("canvas");
+            lineChartContainer.appendChild(lineCanvas);
+            chartsGrid.appendChild(lineChartContainer);
 
-            // Process data for chart
-            const chartData = Object.values(
+            // Process data for line chart
+            const lineChartData = Object.values(
               stageData.stage_jobs
                 .filter(job => job.duration !== null)
                 .reduce((acc, job) => {
@@ -170,9 +170,72 @@
                 }, {})
             );
 
-            // Create chart
-            const ctx = canvas.getContext("2d");
-            createChart(ctx, stageData.stage, chartData, getRandomColor());
+            // Create line chart
+            const lineCtx = lineCanvas.getContext("2d");
+            createChart(lineCtx, stageData.stage, lineChartData, getRandomColor());
+
+            // Create container for bar chart
+            const barChartContainer = document.createElement("div");
+            barChartContainer.className = "chart-container";
+            const barCanvas = document.createElement("canvas");
+            barChartContainer.appendChild(barCanvas);
+            chartsGrid.appendChild(barChartContainer);
+
+            // Process data for bar chart
+            const jobDurations = stageData.stage_jobs
+              .filter(job => job.duration !== null)
+              .reduce((acc, job) => {
+                if (!acc[job.job_name]) {
+                  acc[job.job_name] = 0;
+                }
+                acc[job.job_name] += job.duration;
+                return acc;
+              }, {});
+
+            const barChartData = {
+              labels: Object.keys(jobDurations),
+              datasets: [{
+                label: `${stageData.stage} Job Durations`,
+                data: Object.values(jobDurations),
+                backgroundColor: getRandomColor(),
+              }]
+            };
+
+            // Create bar chart
+            const barCtx = barCanvas.getContext("2d");
+            new Chart(barCtx, {
+              type: 'bar',
+              data: {
+                labels: barChartData.labels,
+                datasets: [{
+                  label: barChartData.datasets[0].label,
+                  data: barChartData.datasets[0].data,
+                  backgroundColor: barChartData.labels.map(() => getRandomColor())
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'top',
+                  },
+                  title: {
+                    display: true,
+                    text: `${stageData.stage} Job Duration`
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Total Duration (seconds)'
+                    }
+                  }
+                }
+              }
+            });
           });
 
         } catch (error) {
