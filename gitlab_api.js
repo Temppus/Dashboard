@@ -39,11 +39,11 @@ async function getGitlabPipelineStageStats(projectId, baseUrl, branchName, token
             throw new Error('Pipelines response is not an array');
         }
         
-        const first30Pipelines = pipelines.slice(0, 50);
+        const firstNPipelines = pipelines.slice(0, 50);
 
         // Fetch jobs for all pipelines in parallel
         const allJobs = await Promise.all(
-            first30Pipelines.map(pipeline => fetchPipelineJobs(pipeline.id))
+            firstNPipelines.map(pipeline => fetchPipelineJobs(pipeline.id))
         ).then(jobArrays => jobArrays.flat());
 
         // Aggregate jobs by stage
@@ -55,6 +55,8 @@ async function getGitlabPipelineStageStats(projectId, baseUrl, branchName, token
                     stage: job.stage,
                     status: job.status,
                     started_at: job.started_at,
+                    created_at: job.created_at,
+                    finished_at: job.finished_at,
                     stage_jobs: []
                 });
             }

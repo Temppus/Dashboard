@@ -130,7 +130,7 @@
             GITLAB_TOKEN
           ))
           .filter(stage => stage.stage_jobs.some(job => job.duration !== null) && stage.status === "success")
-          .sort((a, b) => new Date(a.started_at) - new Date(b.started_at));
+          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
           console.log("Pipeline stage statistics:", stageStats);
           
@@ -195,7 +195,7 @@
             const barChartData = {
               labels: Object.keys(jobDurations),
               datasets: [{
-                label: `${stageData.stage} Job Durations`,
+                label: `${stageData.stage} - Job Durations`,
                 data: Object.values(jobDurations),
                 backgroundColor: getRandomColor(),
               }]
@@ -210,7 +210,7 @@
                 datasets: [{
                   label: barChartData.datasets[0].label,
                   data: barChartData.datasets[0].data,
-                  backgroundColor: barChartData.labels.map(() => getRandomColor())
+                  backgroundColor: '#4B89DC' // Nice blue color
                 }]
               },
               options: {
@@ -222,7 +222,7 @@
                   },
                   title: {
                     display: true,
-                    text: `${stageData.stage} Job Duration`
+                    text: `${stageData.stage} - Job Durations`
                   }
                 },
                 scales: {
@@ -231,6 +231,61 @@
                     title: {
                       display: true,
                       text: 'Total Duration (seconds)'
+                    }
+                  }
+                }
+              }
+            });
+
+            // Create container for failed jobs bar chart
+            const failedBarChartContainer = document.createElement("div");
+            failedBarChartContainer.className = "chart-container";
+            const failedBarCanvas = document.createElement("canvas");
+            failedBarChartContainer.appendChild(failedBarCanvas);
+            chartsGrid.appendChild(failedBarChartContainer);
+
+            // Process data for failed jobs bar chart
+            const failedJobCounts = stageData.stage_jobs
+              .reduce((acc, job) => {
+                if (!acc[job.job_name]) {
+                  acc[job.job_name] = 0;
+                }
+                if (job.status === "failed") {
+                  acc[job.job_name]++;
+                }
+                return acc;
+              }, {});
+
+            // Create failed jobs bar chart
+            const failedBarCtx = failedBarCanvas.getContext("2d");
+            new Chart(failedBarCtx, {
+              type: 'bar',
+              data: {
+                labels: Object.keys(failedJobCounts),
+                datasets: [{
+                  label: `${stageData.stage} - Failing Jobs`,
+                  data: Object.values(failedJobCounts),
+                  backgroundColor: '#D22B2B'
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'top',
+                  },
+                  title: {
+                    display: true,
+                    text: `${stageData.stage} - Failing Jobs`
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Number of Failed Jobs'
                     }
                   }
                 }
