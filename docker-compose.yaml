@@ -1,0 +1,10 @@
+version: '3.8'
+# This configuration is only for CORS and local development purposes
+services:
+  webserver:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/usr/share/nginx/html
+    restart: unless-stopped
